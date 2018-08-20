@@ -1,0 +1,32 @@
+dist: trusty
+sudo: required
+addons:
+  sonarcloud:
+    organization: channelape-github
+    token:
+      secure: AOVS8mMKQN1q1o9n/hpWJQpQxtUgBPzQd0e5y/af5gYcMDj8dYT/NadIpciPy4F5LT6HpP+sUTv1EQ0CLA8eqjjJm2bCD3Se11xYQUUx1/8ouracB+k0Lhp3hIKl4uH/jy6jEcTpnChY26F7aJrsOCxpjcOaqtx8DVYvOEe5LMCZH1ZPSScOatye2hWZN1NTcg3UvZ7D0b/Z8NNly9bK4nXWMuXtDUOtzkdccbOd/VDVvqwbb36vCMbL5Iqk0kIXMPQH0jClrueX6+5pcH7FOOxqNO1kdGdtChVIgfGbb1hs1846s2zZsZv1tj2555DnrMeNziirBDyRW0ebOdNpP9AQSH8M0R0jhnao6BXUx2hY1Ad26e9m50+iWyB9PHFgZ50gI9y9snlQbWKV3N7NTCtz6zS+H70G/2Sr1S1zNBLZ7nhJIMQM57AAl/DvFCBthKpNyGFKJzHjRo0ySSYF+CS0DiUym+IzZtXNH9bn0lH+XchxldK6nzme9uADT/FcFHpUmmcC8YI1JWIXIdUdS39ieVVFa5K5QMGByCP50PowEUOKJiBv2WNQylweP3uL0fAMbEx1hQtuFv6PoxWwAmsM0s37Kb6GgVufhemTxAItc53ISiYY2QC9zfxhd7q1RWXIKQpA3VSxP6eyd/qM4q9MY4DiUsYhD/WUQuKGo9o=
+language: node_js
+node_js:
+  - 8.10.0
+jdk:
+  - oraclejdk8
+install:
+  - npm install
+script:
+  - npm test
+after_success:
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then bash .travis/overwrite-sonar-project-version.sh; fi
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then sonar-scanner; fi
+cache:
+  directories:
+    - node_modules
+    - "$HOME/.sonar/cache"
+deploy:
+  provider: npm
+  skip_cleanup: true
+  email:
+    - "$NPM_EMAIL"
+  api_key:
+    - "$NPM_TOKEN"
+  on:
+    tags: true
