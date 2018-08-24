@@ -52,7 +52,7 @@ describe('ChannelApeActionsController', () => {
   beforeEach(() => {
     Secrets.env.LOG_LEVEL = 'info';
     sandbox = sinon.createSandbox();
-    updateActionStub = sandbox.stub().resolves({ healthCheckIntervalInSeconds: 0.05 });
+    updateActionStub = sandbox.stub().resolves({ healthCheckIntervalInSeconds: 0.001 });
     completeActionStub = sandbox.stub().resolves();
     errorActionStub = sandbox.stub().resolves();
     sandbox.stub(ChannelApeClient.prototype, 'actions').returns({
