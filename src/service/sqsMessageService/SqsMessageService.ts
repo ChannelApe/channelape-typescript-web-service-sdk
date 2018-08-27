@@ -12,8 +12,8 @@ export default class SqsMessageService {
 
   constructor(awsSecretKey: string, awsAccessKeyId: string, private readonly sqsQueueUrl: string) {
     const sqsConfig: AWS.SQS.ClientConfiguration = {
-      accessKeyId: awsSecretKey,
-      secretAccessKey: awsAccessKeyId
+      accessKeyId: awsAccessKeyId,
+      secretAccessKey: awsSecretKey
     };
     this.sqs = new AWS.SQS(sqsConfig);
     this.sqsReceiveMessageRequest = {

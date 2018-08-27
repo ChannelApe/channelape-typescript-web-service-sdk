@@ -10,7 +10,6 @@ module.exports = function(config) {
       opts: "test/mocha.opts"
     },
     mutator: "typescript",
-    // transpilers: ["typescript"],
     reporters: ["clear-text", "progress", "html"],
     testFramework: "mocha",
     coverageAnalysis: "off",

@@ -72,6 +72,16 @@ describe('SqsMessageService', () => {
     sandbox.restore();
   });
 
+  describe('constructor', () => {
+    it('Should instantiate an SQS client with the proper configuration', () => {
+      const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
+      expect(sqsMessageService).not.to.be.undefined;
+      expect(sqsStub.calledOnce).to.be.true;
+      expect(sqsStub.args[0][0].accessKeyId).to.equal('aws_access_key_id');
+      expect(sqsStub.args[0][0].secretAccessKey).to.equal('aws_secret_key');
+    });
+  });
+
   describe('getMessages()', () => {
     describe('Given a non retryable error response from AWS SQS receiveMessage', () => {
       it('Expect a rejected promise', () => {
@@ -96,26 +106,24 @@ describe('SqsMessageService', () => {
     });
 
     describe('Given a retryable error response from AWS SQS receiveMessage 2nd call but success for all others', () => {
-      it('When decompressing the message Expect a resolved promise', (done) => {
+      it('When NOT decompressing the message Expect a resolved promise', () => {
         const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
-        sqsMessageService.getAllMessages({ decompress: true })
+        return sqsMessageService.getAllMessages()
           .then((messages) => {
             expect(messages.length).to.equal(13);
-            expect(messages[0].Body).to.equal('this,is,a,valid,gzipped,string');
-            done();
-          }).catch((e) => { done(new Error('Failed')); });
+            expect(messages[0]!.Body!).to.equal(validCompressedString);
+          });
       });
     });
 
     describe('Given a retryable error response from AWS SQS receiveMessage 2nd call but success for all others', () => {
-      it('When NOT decompressing the message Expect a resolved promise', (done) => {
+      it('When decompressing the message Expect a resolved promise', () => {
         const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
-        sqsMessageService.getAllMessages()
+        return sqsMessageService.getAllMessages({ decompress: true })
           .then((messages) => {
             expect(messages.length).to.equal(13);
-            expect(messages[0]!.Body!).to.equal(validCompressedString);
-            done();
-          }).catch((e) => { done(new Error('Failed')); });
+            expect(messages[0].Body).to.equal('this,is,a,valid,gzipped,string');
+          });
       });
     });
 
@@ -171,6 +179,16 @@ describe('SqsMessageService', () => {
             .then((result) => {
               expect(result).to.equal('Message "message_id_invalid_gzip" acknowledged.');
             });
+        });
+      });
+
+      describe('get QueueUrl', () => {
+        it('Given a queue url of "http://aws.queue.url/"', () => {
+          it('Expect "http://aws.queue.url/" to be returned by the QueueUrl getter', () => {
+            const sqsMessageService =
+              new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'http://aws.queue.url/');
+            expect(sqsMessageService.QueueUrl).to.equal('http://aws.queue.url/');
+          });
         });
       });
     });
