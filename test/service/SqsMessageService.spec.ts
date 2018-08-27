@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as AppRootPath from 'app-root-path';
 import * as AWS from 'aws-sdk';
 
-import SqsMessageService from '../../src/service/SqsMessageService';
+import SqsMessageService from '../../src/service/sqsMessageService/SqsMessageService';
 
 const validCompressedString =
   fs.readFileSync(`${AppRootPath}/test/resources/service/sqs-messages/gzip-valid.txt`, 'utf-8');
@@ -32,18 +32,22 @@ describe('SqsMessageService', () => {
 
   let sandbox: sinon.SinonSandbox;
   let sqsDeleteMessageStub: sinon.SinonStub;
-  let sqsReceiveMessageStub: sinon.SinonStub;
+  let sqsReceiveMessageStub: sinon.SinonStub | undefined;
+  let sqsStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
+    if (sqsReceiveMessageStub !== undefined) {
+      sqsReceiveMessageStub = undefined;
+    }
     sqsReceiveMessageStub = sandbox.stub();
     sqsReceiveMessageStub.onFirstCall().callsFake((request, cb) => {
       cb(null, {
         Messages: [
-          validCompressedSqsMessage, validCompressedSqsMessage, validCompressedSqsMessage, invalidCompressedSqsMessage,
           validCompressedSqsMessage, validCompressedSqsMessage, validCompressedSqsMessage, validCompressedSqsMessage,
-          validCompressedSqsMessage, invalidCompressedSqsMessage
+          validCompressedSqsMessage, validCompressedSqsMessage, validCompressedSqsMessage, validCompressedSqsMessage,
+          validCompressedSqsMessage, validCompressedSqsMessage
         ]
       });
     });
@@ -53,11 +57,15 @@ describe('SqsMessageService', () => {
     sqsReceiveMessageStub.onThirdCall().callsFake((request, cb) => {
       cb(null, {
         Messages: [
-          validCompressedSqsMessage, validCompressedSqsMessage, invalidCompressedSqsMessage
+          validCompressedSqsMessage, validCompressedSqsMessage, validCompressedSqsMessage
         ]
       });
     });
     sqsReceiveMessageStub.onCall(3).callsFake((request, cb) => { cb(null, {}); });
+    sqsStub = sandbox.stub(AWS, 'SQS').returns({
+      receiveMessage: sqsReceiveMessageStub,
+      deleteMessage: sqsDeleteMessageStub
+    });
   });
 
   afterEach(() => {
@@ -71,7 +79,8 @@ describe('SqsMessageService', () => {
         sqsReceiveMessageStub.onFirstCall().callsFake((request, cb) => {
           cb(nonRetryableAwsError, undefined);
         });
-        sandbox.stub(AWS, 'SQS').returns({
+        sqsStub.restore();
+        sqsStub = sandbox.stub(AWS, 'SQS').returns({
           receiveMessage: sqsReceiveMessageStub,
           deleteMessage: sqsDeleteMessageStub
         });
@@ -85,57 +94,84 @@ describe('SqsMessageService', () => {
           });
       });
     });
-  });
 
-  describe('acknowledgeMessage()', () => {
-    describe('Given a message missing a receipt handle', () => {
-      it('Expect a rejected promise', () => {
-        sqsDeleteMessageStub = sandbox.stub().callsFake((request, cb) => { cb(); });
-        sandbox.stub(AWS, 'SQS').returns({
-          receiveMessage: sqsReceiveMessageStub,
-          deleteMessage: sqsDeleteMessageStub
-        });
+    describe('Given a retryable error response from AWS SQS receiveMessage 2nd call but success for all others', () => {
+      it('When decompressing the message Expect a resolved promise', (done) => {
         const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
-        return sqsMessageService.acknowledgeMessage({} as any)
-          .then(() => {
-            throw new Error('Should not have acknowledged the message');
-          })
-          .catch((e) => {
-            expect(e.message).to.equal('Receipt Handle on message is undefined');
-          });
+        sqsMessageService.getAllMessages({ decompress: true })
+          .then((messages) => {
+            expect(messages.length).to.equal(13);
+            expect(messages[0].Body).to.equal('this,is,a,valid,gzipped,string');
+            done();
+          }).catch((e) => { done(new Error('Failed')); });
       });
     });
 
-    describe('Given sqs delete message fails', () => {
-      it('Expect a rejected promise', () => {
-        sqsDeleteMessageStub = sandbox.stub().callsFake((request, cb) => { cb(new Error('ERROR')); });
-        sandbox.stub(AWS, 'SQS').returns({
-          receiveMessage: sqsReceiveMessageStub,
-          deleteMessage: sqsDeleteMessageStub
-        });
+    describe('Given a retryable error response from AWS SQS receiveMessage 2nd call but success for all others', () => {
+      it('When NOT decompressing the message Expect a resolved promise', (done) => {
         const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
-        return sqsMessageService.acknowledgeMessage(invalidCompressedSqsMessage)
-          .then(() => {
-            throw new Error('Should not have acknowledged the message');
-          })
-          .catch((e) => {
-            expect(e).to.equal('Message "message_id_invalid_gzip" not acknowledged.');
-          });
+        sqsMessageService.getAllMessages()
+          .then((messages) => {
+            expect(messages.length).to.equal(13);
+            expect(messages[0]!.Body!).to.equal(validCompressedString);
+            done();
+          }).catch((e) => { done(new Error('Failed')); });
       });
     });
 
-    describe('Given sqs delete message succeeds', () => {
-      it('Expect a resolved promise', () => {
-        sqsDeleteMessageStub = sandbox.stub().callsFake((request, cb) => { cb(); });
-        sandbox.stub(AWS, 'SQS').returns({
-          receiveMessage: sqsReceiveMessageStub,
-          deleteMessage: sqsDeleteMessageStub
-        });
-        const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
-        return sqsMessageService.acknowledgeMessage(invalidCompressedSqsMessage)
-          .then((result) => {
-            expect(result).to.equal('Message "message_id_invalid_gzip" acknowledged.');
+    describe('acknowledgeMessage()', () => {
+      describe('Given a message missing a receipt handle', () => {
+        it('Expect a rejected promise', () => {
+          sqsDeleteMessageStub = sandbox.stub().callsFake((request, cb) => { cb(); });
+          sqsStub.restore();
+          sqsStub = sandbox.stub(AWS, 'SQS').returns({
+            receiveMessage: sqsReceiveMessageStub,
+            deleteMessage: sqsDeleteMessageStub
           });
+          const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
+          return sqsMessageService.acknowledgeMessage({} as any)
+            .then(() => {
+              throw new Error('Should not have acknowledged the message');
+            })
+            .catch((e) => {
+              expect(e.message).to.equal('Receipt Handle on message is undefined');
+            });
+        });
+      });
+
+      describe('Given sqs delete message fails', () => {
+        it('Expect a rejected promise', () => {
+          sqsDeleteMessageStub = sandbox.stub().callsFake((request, cb) => { cb(new Error('ERROR')); });
+          sqsStub.restore();
+          sqsStub = sandbox.stub(AWS, 'SQS').returns({
+            receiveMessage: sqsReceiveMessageStub,
+            deleteMessage: sqsDeleteMessageStub
+          });
+          const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
+          return sqsMessageService.acknowledgeMessage(invalidCompressedSqsMessage)
+            .then(() => {
+              throw new Error('Should not have acknowledged the message');
+            })
+            .catch((e) => {
+              expect(e).to.equal('Message "message_id_invalid_gzip" not acknowledged.');
+            });
+        });
+      });
+
+      describe('Given sqs delete message succeeds', () => {
+        it('Expect a resolved promise', () => {
+          sqsDeleteMessageStub = sandbox.stub().callsFake((request, cb) => { cb(); });
+          sqsStub.restore();
+          sqsStub = sandbox.stub(AWS, 'SQS').returns({
+            receiveMessage: sqsReceiveMessageStub,
+            deleteMessage: sqsDeleteMessageStub
+          });
+          const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
+          return sqsMessageService.acknowledgeMessage(invalidCompressedSqsMessage)
+            .then((result) => {
+              expect(result).to.equal('Message "message_id_invalid_gzip" acknowledged.');
+            });
+        });
       });
     });
   });
