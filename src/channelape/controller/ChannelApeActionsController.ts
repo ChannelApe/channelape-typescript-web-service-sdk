@@ -1,6 +1,6 @@
 import { ChannelApeClient } from 'channelape-sdk';
 import { Request, Response } from 'express';
-import Logger from 'channelape-logger/dist/utils/Logger';
+import { Logger } from 'channelape-logger';
 import * as moment from 'moment';
 
 import Secrets from '../../service/Secrets';
