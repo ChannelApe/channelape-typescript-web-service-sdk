@@ -1,6 +1,6 @@
 {
 	"name": "channelape-web-service-sdk",
-	"version": "0.1.0-alpha.2",
+	"version": "0.1.0-alpha.3",
 	"description": "Common services, controllers, and models for ChannelApe TypeScript and JavaScript web services.",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
