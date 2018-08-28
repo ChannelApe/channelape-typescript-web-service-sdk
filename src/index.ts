@@ -4,3 +4,4 @@ export { Parser };
 export { default as ChannelApeActionsController } from './channelape/controller/ChannelApeActionsController';
 export { default as SqsMessageService } from './service/sqsMessageService/SqsMessageService';
 export { default as DecompressionService } from './service/decompressionService/DecompressionService';
+export { default as AdditionalFieldService } from './channelape/service/AdditionalFieldService';
