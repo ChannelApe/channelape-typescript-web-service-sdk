@@ -1,5 +1,5 @@
 import * as sinon from 'sinon';
-import { ChannelApeClient } from 'channelape-sdk';
+import { ChannelApeClient, Environment } from 'channelape-sdk';
 import { expect } from 'chai';
 import { mockReq, mockRes } from 'sinon-express-mock';
 import { Logger } from 'channelape-logger';
@@ -9,7 +9,8 @@ import ChannelApeActionsController from '../../../src/channelape/controller/Chan
 import Secrets from '../../../src/service/Secrets';
 
 const channelApeClient = new ChannelApeClient({
-  sessionId: 'valid-session-id'
+  endpoint: Environment.STAGING,
+  sessionId: 'valid-session-id-test'
 });
 
 class GenericControllerThatErrs extends ChannelApeActionsController {
