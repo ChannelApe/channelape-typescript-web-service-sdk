@@ -10,8 +10,14 @@ export default class SqsMessageService {
   private sqs: AWS.SQS;
   private sqsReceiveMessageRequest: AWS.SQS.ReceiveMessageRequest;
 
-  constructor(awsSecretKey: string, awsAccessKeyId: string, private readonly sqsQueueUrl: string) {
+  constructor(
+    awsSecretKey: string,
+    awsAccessKeyId: string,
+    private readonly sqsQueueUrl: string,
+    region = 'us-east-1'
+  ) {
     const sqsConfig: AWS.SQS.ClientConfiguration = {
+      region,
       accessKeyId: awsAccessKeyId,
       secretAccessKey: awsSecretKey
     };
