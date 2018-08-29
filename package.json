@@ -52,10 +52,12 @@
 	],
 	"dependencies": {
 		"aws-sdk": "^2.301.0",
+		"channelape-logger": "^0.1.6",
 		"channelape-sdk": "^1.1.0",
 		"dotenv": "^5.0.1",
 		"express": "^4.16.3",
 		"moment": "^2.22.2",
+		"q": "^1.5.1",
 		"xml2js": "^0.4.19"
 	},
 	"devDependencies": {
