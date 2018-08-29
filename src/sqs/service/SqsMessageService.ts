@@ -32,10 +32,24 @@ export default class SqsMessageService {
     return this.sqsQueueUrl;
   }
 
-  public getAllMessages(options?: GetMessageOptions): Q.Promise<AWS.SQS.Message[]> {
-    const allMessagesRetrievedDeferred = Q.defer<AWS.SQS.Message[]>();
-    this.getMessages(allMessagesRetrievedDeferred, [], options);
-    return allMessagesRetrievedDeferred.promise;
+  public async getAllMessages(options?: GetMessageOptions): Promise<AWS.SQS.Message[]> {
+    let messages: AWS.SQS.Message[] = [];
+    let tryingToGetMessages = true;
+    while (tryingToGetMessages) {
+      try {
+        const messageGroup = await this.getMessageGroup();
+        if (messageGroup === undefined || messageGroup.length === 0) {
+          tryingToGetMessages = false;
+        } else {
+          messages = messages.concat(messageGroup);
+        }
+      } catch (e) {
+        if (!this.isRetryableSqsError(e)) {
+          throw e;
+        }
+      }
+    }
+    return Q.all(messages.map(message => this.finalizeMessage(message, options)));
   }
 
   public acknowledgeMessage(message: AWS.SQS.Message): Q.Promise<any> {
@@ -56,52 +70,37 @@ export default class SqsMessageService {
     return deferred.promise;
   }
 
-  private getMessages(
-    allMessagesRetrievedDeferred: Q.Deferred<AWS.SQS.Message[]>,
-    messages: AWS.SQS.Message[],
-    options?: GetMessageOptions
-  ): void {
+  private async getMessageGroup(): Promise<AWS.SQS.Message[] | undefined> {
+    const deferred = Q.defer<AWS.SQS.Message[]>();
     this.sqs.receiveMessage(this.sqsReceiveMessageRequest, (err, data) => {
       if (err) {
-        if (err.retryable) {
-          this.getMessages(allMessagesRetrievedDeferred, messages, options);
-          return;
-        }
-        allMessagesRetrievedDeferred.reject(err);
+        deferred.reject(err);
         return;
       }
-      if (data.Messages === undefined) {
-        this.finalizeMessages(allMessagesRetrievedDeferred, messages, options);
-        return;
-      }
-      this.getMessages(allMessagesRetrievedDeferred, messages.concat(data.Messages), options);
+      deferred.resolve(data.Messages);
     });
+    return deferred.promise;
   }
 
-  private finalizeMessages(
-    allMessagesRetrievedDeferred: Q.Deferred<AWS.SQS.Message[]>,
-    messages: AWS.SQS.Message[],
+  private isRetryableSqsError(e: any) {
+    return e.retryable !== undefined && e.retryable === true;
+  }
+
+  private async finalizeMessage(
+    message: AWS.SQS.Message,
     options?: GetMessageOptions
-  ) {
+  ): Promise<AWS.SQS.Message> {
     if (options !== undefined && options.decompress === true) {
-      const decompressedMessagePromises = messages.map(this.decompressMessageBody);
-      Q.all(decompressedMessagePromises)
-        .then(decompressedMessages => allMessagesRetrievedDeferred.resolve(decompressedMessages))
-        .catch((e) => {
-          allMessagesRetrievedDeferred.reject(`Decompressing all messages failed: ${e.message}`);
-        });
-      return;
+      return await this.decompressMessageBody(message);
     }
-    allMessagesRetrievedDeferred.resolve(messages);
+    return Q.resolve(message);
   }
 
-  private decompressMessageBody(message: AWS.SQS.Message): Q.Promise<AWS.SQS.Message> {
+  private async decompressMessageBody(message: AWS.SQS.Message): Promise<AWS.SQS.Message> {
     if (message.Body !== undefined) {
-      return DecompressionService.decompress(message.Body)
-        .then((decompressedMessageBody) => {
-          message.Body = decompressedMessageBody;
-          return message;
-        });
+      const decompressedBody = await DecompressionService.decompress(message.Body);
+      message.Body = decompressedBody;
+      return message;
     }
     return Q.resolve(message);
   }
