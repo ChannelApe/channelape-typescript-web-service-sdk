@@ -2,8 +2,8 @@ import { expect } from 'chai';
 import * as fs from 'fs';
 import * as AppRootPath from 'app-root-path';
 
-import XmlParsingService from '../../../../src/service/parser/service/XmlParsingService';
-import TestInterface from '../../../resources/service/parser/service/TestInterface';
+import XmlParsingService from '../../../src/parser/service/XmlParsingService';
+import TestInterface from '../../resources/service/parser/service/TestInterface';
 
 const validXml =
   fs.readFileSync(`${AppRootPath}/test/resources/service/parser/service/validXml.xml`, 'utf-8');

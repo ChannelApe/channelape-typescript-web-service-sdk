@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 
-import * as Parser from '../../../src/service/parser/Parser';
+import * as Parser from '../../src/parser/Parser';
 
 describe('Parser', () => {
   it('Should export XML as a getter with XmlParsingService as the return value', () => {

@@ -6,7 +6,7 @@ import { Logger } from 'channelape-logger';
 import * as Q from 'q';
 
 import ChannelApeActionsController from '../../../src/channelape/controller/ChannelApeActionsController';
-import Secrets from '../../../src/service/Secrets';
+import Secrets from '../../../src/environment/model/Secrets';
 
 const channelApeClient = new ChannelApeClient({
   endpoint: Environment.STAGING,

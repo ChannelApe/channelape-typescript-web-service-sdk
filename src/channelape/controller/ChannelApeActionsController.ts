@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import { Logger } from 'channelape-logger';
 import * as moment from 'moment';
 
-import Secrets from '../../service/Secrets';
+import Secrets from '../../environment/model/Secrets';
 
 const PARSE_INT_RADIX = 10;
 

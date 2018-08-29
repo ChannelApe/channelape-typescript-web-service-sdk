@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as AppRootPath from 'app-root-path';
 import * as AWS from 'aws-sdk';
 
-import SqsMessageService from '../../src/service/sqsMessageService/SqsMessageService';
+import SqsMessageService from '../../../src/sqs/service/SqsMessageService';
 
 const validCompressedString =
   fs.readFileSync(`${AppRootPath}/test/resources/service/sqs-messages/gzip-valid.txt`, 'utf-8');

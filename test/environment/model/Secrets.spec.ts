@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import * as dotenv from 'dotenv';
 import * as sinon from 'sinon';
-import Secrets from '../../src/service/Secrets';
+import Secrets from '../../../src/environment/model/Secrets';
 
 describe('Secrets', () => {
   let sandbox: sinon.SinonSandbox;
