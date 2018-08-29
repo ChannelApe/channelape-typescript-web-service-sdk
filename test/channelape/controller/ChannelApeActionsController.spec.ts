@@ -4,6 +4,7 @@ import { expect } from 'chai';
 import { mockReq, mockRes } from 'sinon-express-mock';
 import { Logger } from 'channelape-logger';
 import * as Q from 'q';
+import * as timers from 'timers';
 
 import ChannelApeActionsController from '../../../src/channelape/controller/ChannelApeActionsController';
 import Secrets from '../../../src/environment/model/Secrets';
@@ -36,8 +37,10 @@ class GenericControllerThatResolves extends ChannelApeActionsController {
     const deferred = Q.defer<boolean>();
     setTimeout(() => {
       this.complete(actionId);
-      deferred.resolve(true);
     }, 150);
+    setTimeout(() => {
+      deferred.resolve(true);
+    }, 3000);
     return deferred.promise;
   }
 }
@@ -49,10 +52,12 @@ describe('ChannelApeActionsController', () => {
   let updateActionStub: sinon.SinonStub;
   let completeActionStub: sinon.SinonStub;
   let errorActionStub: sinon.SinonStub;
+  let clearIntervalSpy: sinon.SinonSpy;
 
   beforeEach(() => {
     Secrets.env.LOG_LEVEL = 'info';
     sandbox = sinon.createSandbox();
+    clearIntervalSpy = sandbox.spy(timers, 'clearInterval');
     updateActionStub = sandbox.stub().resolves({ healthCheckIntervalInSeconds: 0.001 });
     completeActionStub = sandbox.stub().resolves();
     errorActionStub = sandbox.stub().resolves();
@@ -81,6 +86,7 @@ describe('ChannelApeActionsController', () => {
     const errorController = new GenericControllerThatErrs();
     return errorController.handle(req, res)
       .then(() => {
+        expect(clearIntervalSpy.calledOnce).to.be.true;
         expect(infoLoggerStub.args[0][0]).to.equal(`Updating healthcheck for action ${expectedActionId}`);
         expect(errorLoggerStub.args[0][0]).to.equal('Action action_id has failed with error "BOOM!"');
         expect(errorActionStub.called).to.be.true;
@@ -100,6 +106,7 @@ describe('ChannelApeActionsController', () => {
     const successController = new GenericControllerThatResolves();
     return successController.handle(req, res)
       .then(() => {
+        expect(clearIntervalSpy.calledOnce).to.be.true;
         expect(infoLoggerStub.args[0][0]).to.equal(`Updating healthcheck for action ${expectedActionId}`);
         expect(errorLoggerStub.args.length).to.equal(0);
         expect(errorActionStub.called).to.be.false;

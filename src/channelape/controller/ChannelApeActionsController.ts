@@ -2,6 +2,7 @@ import { ChannelApeClient } from 'channelape-sdk';
 import { Request, Response } from 'express';
 import { Logger } from 'channelape-logger';
 import * as moment from 'moment';
+import * as timers from 'timers';
 
 import Secrets from '../../environment/model/Secrets';
 
@@ -34,12 +35,15 @@ export default abstract class ChannelApeActionsController {
           this.handleError(err, actionId);
           return;
         }
+        if (this.updateHealthCheckInterval !== undefined) {
+          timers.clearInterval(this.updateHealthCheckInterval);
+        }
         res.status(400).send(err);
       });
   }
 
   private startHealthCheckInterval(actionId: string, intervalInSeconds: number): NodeJS.Timer {
-    return setInterval(() => this.updateHealthCheck(actionId), intervalInSeconds * 1000);
+    return timers.setInterval(() => this.updateHealthCheck(actionId), intervalInSeconds * 1000);
   }
 
   protected updateHealthCheck(actionId: string): void {
@@ -52,7 +56,7 @@ export default abstract class ChannelApeActionsController {
 
   protected complete(actionId: string): void {
     if (this.updateHealthCheckInterval !== undefined) {
-      clearInterval(this.updateHealthCheckInterval);
+      timers.clearInterval(this.updateHealthCheckInterval);
     }
     this.channelApeClient.actions().complete(actionId)
       .then(() => this.logger.info(`Action ${actionId} has been completed`))
@@ -61,7 +65,7 @@ export default abstract class ChannelApeActionsController {
 
   protected handleError(err: any, actionId: string): void {
     if (this.updateHealthCheckInterval !== undefined) {
-      clearInterval(this.updateHealthCheckInterval);
+      timers.clearInterval(this.updateHealthCheckInterval);
     }
 
     let error: any;
