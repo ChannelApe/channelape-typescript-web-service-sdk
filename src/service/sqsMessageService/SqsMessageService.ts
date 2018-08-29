@@ -2,7 +2,7 @@ import * as AWS from 'aws-sdk';
 import * as Q from 'q';
 
 import GetMessageOptions from './model/GetMessageOptions';
-import DecompressionService from '../decompressionService/DecompressionService';
+import DecompressionService from '../../decompression/service/DecompressionService';
 
 const MAX_NUMBER_OF_MESSAGES = 10;
 
