@@ -7,8 +7,8 @@ import DecompressionService from '../decompressionService/DecompressionService';
 const MAX_NUMBER_OF_MESSAGES = 10;
 
 export default class SqsMessageService {
-  private sqs: AWS.SQS;
-  private sqsReceiveMessageRequest: AWS.SQS.ReceiveMessageRequest;
+  private readonly sqs: AWS.SQS;
+  private readonly sqsReceiveMessageRequest: AWS.SQS.ReceiveMessageRequest;
 
   constructor(
     awsSecretKey: string,
@@ -70,13 +70,11 @@ export default class SqsMessageService {
         allMessagesRetrievedDeferred.reject(err);
         return;
       }
-      let combinedMessages = messages;
       if (data.Messages === undefined) {
         this.finalizeMessages(allMessagesRetrievedDeferred, messages, options);
         return;
       }
-      combinedMessages = messages.concat(data.Messages);
-      this.getMessages(allMessagesRetrievedDeferred, combinedMessages, options);
+      this.getMessages(allMessagesRetrievedDeferred, messages.concat(data.Messages), options);
     });
   }
 
@@ -101,7 +99,7 @@ export default class SqsMessageService {
     if (message.Body !== undefined) {
       return DecompressionService.decompress(message.Body)
         .then((decompressedMessageBody) => {
-          message.Body! = decompressedMessageBody;
+          message.Body = decompressedMessageBody;
           return message;
         });
     }
