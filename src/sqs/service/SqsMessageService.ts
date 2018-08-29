@@ -91,7 +91,7 @@ export default class SqsMessageService {
     options?: GetMessageOptions
   ): Promise<AWS.SQS.Message> {
     if (options !== undefined && options.decompress === true) {
-      return await this.decompressMessageBody(message);
+      return this.decompressMessageBody(message);
     }
     return Q.resolve(message);
   }
