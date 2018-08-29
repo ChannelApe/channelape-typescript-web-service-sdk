@@ -30,7 +30,7 @@ deploy:
     - "$NPM_TOKEN"
   on:
     branch: develop
-    tag: next
+    tag: develop
   provider: npm
   skip_cleanup: true
   email:
@@ -39,5 +39,5 @@ deploy:
     - "$NPM_TOKEN"
   on:
     branch: master
-    tags: true
+    tag: latest
 
