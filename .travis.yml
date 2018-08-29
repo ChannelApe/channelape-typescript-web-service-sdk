@@ -29,4 +29,15 @@ deploy:
   api_key:
     - "$NPM_TOKEN"
   on:
+    branch: develop
+    tag: next
+  provider: npm
+  skip_cleanup: true
+  email:
+    - "$NPM_EMAIL"
+  api_key:
+    - "$NPM_TOKEN"
+  on:
+    branch: master
     tags: true
+
