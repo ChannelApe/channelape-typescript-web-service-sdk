@@ -2,7 +2,7 @@ import { Builder, parseString } from 'xml2js';
 import * as Q from 'q';
 
 export default class XmlParsingService {
-  private static xmlBuilder = new Builder({ headless: true });
+  private static readonly xmlBuilder = new Builder({ headless: true });
 
   public static toXml(obj: any): Q.Promise<string> {
     const deferred = Q.defer<string>();
