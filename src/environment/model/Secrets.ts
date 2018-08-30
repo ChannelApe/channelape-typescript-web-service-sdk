@@ -10,7 +10,9 @@ export default class Secrets {
     RSSBUS_ENDPOINT: '',
     PORT: '3000',
     CHANNEL_APE_OPEN_ORDERS_START_DATE_INTERVAL_DAYS: '7',
-    LOG_LEVEL: 'info'
+    LOG_LEVEL: 'info',
+    CHANNEL_APE_REQUEST_TIMEOUT: '300000',
+    CHANNEL_APE_MAX_REQUEST_RETRY_TIMEOUT: '600000'
   };
 
   public static validateEnvars() {
