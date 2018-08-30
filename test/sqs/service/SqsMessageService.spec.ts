@@ -142,7 +142,7 @@ describe('SqsMessageService', () => {
               throw new Error('Should not have acknowledged the message');
             })
             .catch((e) => {
-              expect(e.message).to.equal('Receipt Handle on message is undefined');
+              expect(e).to.equal('Receipt Handle on message is undefined');
             });
         });
       });

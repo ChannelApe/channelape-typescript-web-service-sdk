@@ -1,5 +1,4 @@
 import * as AWS from 'aws-sdk';
-import * as Q from 'q';
 
 import GetMessageOptions from './model/GetMessageOptions';
 import DecompressionService from '../../decompression/service/DecompressionService';
@@ -49,37 +48,38 @@ export default class SqsMessageService {
         }
       }
     }
-    return Q.all(messages.map(message => this.finalizeMessage(message, options)));
+    return Promise.all(messages.map(message => this.finalizeMessage(message, options)));
   }
 
-  public acknowledgeMessage(message: AWS.SQS.Message): Q.Promise<any> {
-    const deferred = Q.defer<any>();
-    if (message.ReceiptHandle === undefined) {
-      return Q.reject(new Error('Receipt Handle on message is undefined'));
-    }
-    this.sqs.deleteMessage({
-      QueueUrl: this.sqsQueueUrl,
-      ReceiptHandle: message.ReceiptHandle
-    }, (err) => {
-      if (err) {
-        deferred.reject(`Message "${message.MessageId}" not acknowledged.`);
+  public acknowledgeMessage(message: AWS.SQS.Message): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      if (message.ReceiptHandle === undefined) {
+        reject('Receipt Handle on message is undefined');
         return;
       }
-      deferred.resolve(`Message "${message.MessageId}" acknowledged.`);
+      this.sqs.deleteMessage({
+        QueueUrl: this.sqsQueueUrl,
+        ReceiptHandle: message.ReceiptHandle
+      }, (err) => {
+        if (err) {
+          reject(`Message "${message.MessageId}" not acknowledged.`);
+          return;
+        }
+        resolve(`Message "${message.MessageId}" acknowledged.`);
+      });
     });
-    return deferred.promise;
   }
 
   private async getMessageGroup(): Promise<AWS.SQS.Message[] | undefined> {
-    const deferred = Q.defer<AWS.SQS.Message[]>();
-    this.sqs.receiveMessage(this.sqsReceiveMessageRequest, (err, data) => {
-      if (err) {
-        deferred.reject(err);
-        return;
-      }
-      deferred.resolve(data.Messages);
+    return new Promise<AWS.SQS.Message[] | undefined>((resolve, reject) => {
+      this.sqs.receiveMessage(this.sqsReceiveMessageRequest, (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data.Messages);
+        }
+      });
     });
-    return deferred.promise;
   }
 
   private isRetryableSqsError(e: any) {
@@ -93,7 +93,7 @@ export default class SqsMessageService {
     if (options !== undefined && options.decompress === true) {
       return this.decompressMessageBody(message);
     }
-    return Q.resolve(message);
+    return Promise.resolve(message);
   }
 
   private async decompressMessageBody(message: AWS.SQS.Message): Promise<AWS.SQS.Message> {
@@ -102,6 +102,6 @@ export default class SqsMessageService {
       message.Body = decompressedBody;
       return message;
     }
-    return Q.resolve(message);
+    return Promise.resolve(message);
   }
 }
