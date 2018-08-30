@@ -82,6 +82,13 @@ describe('SqsMessageService', () => {
     });
   });
 
+  describe('get QueueUrl()', () => {
+    it('Should return the correct queue url passed into the constructor', () => {
+      const sqsMessageService = new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'queue_url');
+      expect(sqsMessageService.QueueUrl).to.equal('queue_url');
+    });
+  });
+
   describe('getMessages()', () => {
     describe('Given a non retryable error response from AWS SQS receiveMessage', () => {
       it('Expect a rejected promise', () => {
