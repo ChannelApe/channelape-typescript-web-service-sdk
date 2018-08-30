@@ -62,7 +62,7 @@ export default class SqsMessageService {
         ReceiptHandle: message.ReceiptHandle
       }, (err) => {
         if (err) {
-          reject(`Message "${message.MessageId}" not acknowledged.`);
+          reject(`Message "${message.MessageId}" not acknowledged. Error: "${err.message}"`);
           return;
         }
         resolve(`Message "${message.MessageId}" acknowledged.`);

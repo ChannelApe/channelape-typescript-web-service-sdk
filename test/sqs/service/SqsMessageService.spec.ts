@@ -161,7 +161,7 @@ describe('SqsMessageService', () => {
               throw new Error('Should not have acknowledged the message');
             })
             .catch((e) => {
-              expect(e).to.equal('Message "message_id_invalid_gzip" not acknowledged.');
+              expect(e).to.equal('Message "message_id_invalid_gzip" not acknowledged. Error: "ERROR"');
             });
         });
       });
