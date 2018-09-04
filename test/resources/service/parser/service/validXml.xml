@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CHANNELAPE_ACK>
+  <HEAD>
+    <Message_Id>1701701701701</Message_Id>
+    <Date_Time>20160116160158</Date_Time>
+    <Message_Type>APEACK</Message_Type>
+    <Sender_Id>SOME_ID</Sender_Id>
+    <Recipient_Id>APE</Recipient_Id>
+    <ACK>
+      <Reference_Id>126625</Reference_Id>
+      <Dstamp>20160116160157</Dstamp>
+      <Status>Success</Status>
+    </ACK>
+  </HEAD>
+</CHANNELAPE_ACK>
