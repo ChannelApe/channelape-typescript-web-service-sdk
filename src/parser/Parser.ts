@@ -1,3 +1,3 @@
 import XmlParsingService from './service/XmlParsingService';
 
-export { XmlParsingService as XML };
+export { XmlParsingService as Xml };
