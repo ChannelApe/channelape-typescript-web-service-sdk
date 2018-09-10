@@ -19,15 +19,14 @@ If you have a question please refrain from opening a GitHub issue. We have an of
 - [ChannelApe Community](https://community.channelape.com/)
 
 ## Prerequisites
-- Maven
-- JDK 8
+- Node 8.10.0
 
 ## Getting Started
 ChannelApe uses the [gitflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow) workflow for managing our projects. So depending on what you are working on will dictate which branch to start from and merge to.
 - Clone the repository locally.
 - New Features/Improvements start from the **'develop'** branch.
 - Hotfixes start from the **'master'** branch.
-- Run ``mvn install `` from the root directory of the project.
+- Run ``npm install `` from the root directory of the project.
 
 
 ## Building and Testing
@@ -38,12 +37,12 @@ ChannelApe uses different types of tests to verify functionality.
 
 #### Running all tests
 
-``mvn install ``
+``npm run test``
 
 #### Coverage
 The goal is to get line and branch coverage to **100%** on new code. 
 
-ChannelApe uses [PIT Test](http://pitest.org/) for running mutations on unit tests. This ensures that tests are well written. The goal for mutation coverage is equal to or greater than the threshold. The threshold is defined in **pom.xml**. If you are to increase mutation coverage, please update the threshold to reflect the new coverage percentage.
+ChannelApe uses [Stryker](https://stryker-mutator.io/) for running mutations on unit tests. This ensures that tests are well written. The goal for mutation coverage is equal to or greater than the threshold. The threshold is defined in **stryker.conf.js**. If you are to increase mutation coverage, please update the threshold to reflect the new coverage percentage.
 
 ## Reporting a bug
 If you find a bug and would like to report it, please follow the guidelines below:
@@ -80,4 +79,3 @@ Please review our style guide. ChannelApe will request changes based on this sty
 
 ## Update README if applicable
 If you make any changes that affect the end user, please update the README.md to reflect this.
-
