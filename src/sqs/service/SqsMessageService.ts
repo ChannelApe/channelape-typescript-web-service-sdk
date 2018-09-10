@@ -70,6 +70,22 @@ export default class SqsMessageService {
     });
   }
 
+  public sendMessage(message: any, messageGroupId: string): Promise<AWS.SQS.SendMessageResult> {
+    return new Promise<AWS.SQS.SendMessageResult>((resolve, reject) => {
+      const params: AWS.SQS.SendMessageRequest = {
+        MessageGroupId: messageGroupId,
+        QueueUrl: this.sqsQueueUrl,
+        MessageBody: JSON.stringify(message),
+      };
+      this.sqs.sendMessage(params, (err, data) => {
+        if (err) {
+          return reject(`Message not sent. Error: "${err.message}"`);
+        }
+        resolve(data);
+      });
+    });
+  }
+
   private async getMessageGroup(): Promise<AWS.SQS.Message[] | undefined> {
     return new Promise<AWS.SQS.Message[] | undefined>((resolve, reject) => {
       this.sqs.receiveMessage(this.sqsReceiveMessageRequest, (err, data) => {
