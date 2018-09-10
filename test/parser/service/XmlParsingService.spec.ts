@@ -55,6 +55,26 @@ describe('XmlParsingService', () => {
           expect(err).to.equal('Cannot convert undefined or null to object');
         });
     });
+
+    it('Given parsing XML synchronously, ' +
+      'When JSON is converted to XML, ' +
+      'Then it will return in a callback', (done) => {
+      XmlParsingService.toXmlSync(validObj, (err, xml) => {
+        expect(err).to.be.undefined;
+        expect(xml).to.equal(expectedXml);
+        done();
+      });
+    });
+
+    it('Given parsing XML synchronously, ' +
+      'When the object is null, ' +
+      'Then it will return an error in the callback', (done) => {
+      XmlParsingService.toXmlSync(nullObj, (err, xml) => {
+        expect(xml).to.be.undefined;
+        expect(err).to.equal('Cannot convert undefined or null to object');
+        done();
+      });
+    });
   });
 
   describe('fromXml', () => {

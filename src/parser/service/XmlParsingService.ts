@@ -13,6 +13,15 @@ export default class XmlParsingService {
     });
   }
 
+  public static toXmlSync(obj: any, callback: (err: string | undefined, xml: string | undefined) => void) {
+    try {
+      const xml = this.xmlBuilder.buildObject(obj);
+      callback(undefined, xml);
+    } catch (err) {
+      callback(err.message, undefined);
+    }
+  }
+
   public static fromXml<T>(xml: string): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       parseString(xml, (err, result) => {
