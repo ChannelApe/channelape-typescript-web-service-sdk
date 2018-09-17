@@ -1,10 +1,9 @@
-import SqsMessageService from '../../aws/sqs/service/SqsMessageService';
 import { Logger, LogLevel } from 'channelape-logger';
+import * as uuid from 'uuid';
 
+import SqsMessageService from '../../aws/sqs/service/SqsMessageService';
 import ErrorReport from '../model/ErrorReport';
 import AwsCredentials from '../../aws/model/AwsCredentials';
-
-const SQS_MESSAGE_GROUP_ID = 'Error_Reports';
 
 export default class ErrorReportingService {
   private readonly sqsMessageService: SqsMessageService;
@@ -35,7 +34,7 @@ export default class ErrorReportingService {
       channelApeOrder: `https://${this.channelApeWebAppDomainName}/orders/${errorReport.channelApeOrderId}`,
       message: errorReport.message
     };
-    this.sqsMessageService.sendMessage(message, SQS_MESSAGE_GROUP_ID)
+    this.sqsMessageService.sendMessage(message, uuid.v4())
       .catch(err => this.logger.error('Failed to queue the following error: ' +
         `${JSON.stringify(message)} because: ${err}`));
   }
