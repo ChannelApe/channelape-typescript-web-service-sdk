@@ -16,7 +16,8 @@ module.exports = function(config) {
     tsconfigFile: "tsconfig.json",
     thresholds: { high: 90, low: 70, break: 75 },
     mutate: [
-      "src/**/*.ts"
+      "src/**/*.ts",
+      "!**/model/*"
     ]
   });
 };
