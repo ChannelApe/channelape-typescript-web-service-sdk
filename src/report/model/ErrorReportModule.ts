@@ -2,7 +2,7 @@ enum ErrorReportModule {
   INVENTORY = 'Inventory',
   ORDER = 'Order',
   ORDER_REJECTIONS = 'Order Rejections',
-  FULFILLMENT = 'fulfillment'
+  FULFILLMENT = 'Fulfillment'
 }
 
 export default ErrorReportModule;
