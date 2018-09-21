@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as AppRootPath from 'app-root-path';
 import * as AWS from 'aws-sdk';
 
-import SqsMessageService from '../../../src/sqs/service/SqsMessageService';
+import SqsMessageService from '../../../../src/aws/sqs/service/SqsMessageService';
 
 const validCompressedString =
   fs.readFileSync(`${AppRootPath}/test/resources/service/sqs-messages/gzip-valid.txt`, 'utf-8');
@@ -33,6 +33,7 @@ describe('SqsMessageService', () => {
   let sandbox: sinon.SinonSandbox;
   let sqsDeleteMessageStub: sinon.SinonStub;
   let sqsReceiveMessageStub: sinon.SinonStub | undefined;
+  let sqsSendMessageStub: sinon.SinonStub;
   let sqsStub: sinon.SinonStub;
 
   beforeEach(() => {
@@ -62,9 +63,17 @@ describe('SqsMessageService', () => {
       });
     });
     sqsReceiveMessageStub.onCall(3).callsFake((request, cb) => { cb(null, {}); });
+    sqsSendMessageStub = sandbox.stub();
+    sqsSendMessageStub.onFirstCall().callsFake((request, cb) => {
+      cb(null, { MessageId: 'SQS message ID' });
+    });
+    sqsSendMessageStub.onSecondCall().callsFake((request, cb) => {
+      cb({ message: 'Access to the resource https://sqs.us-east-1.amazonaws.com/ is denied.' }, null);
+    });
     sqsStub = sandbox.stub(AWS, 'SQS').returns({
       receiveMessage: sqsReceiveMessageStub,
-      deleteMessage: sqsDeleteMessageStub
+      deleteMessage: sqsDeleteMessageStub,
+      sendMessage: sqsSendMessageStub
     });
   });
 
@@ -199,5 +208,37 @@ describe('SqsMessageService', () => {
         });
       });
     });
+  });
+
+  it('Given sending message to SQS, ' +
+    'When the message is sent successfully, ' +
+    'Then it resolves with the SQS send message results', () => {
+    const sqsMessageService =
+      new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'http://aws.queue.url/');
+    return sqsMessageService.sendMessage({ message: 'message' }, 'message-group')
+      .then((response) => {
+        expect(response).not.to.be.undefined;
+        expect(sqsSendMessageStub.calledOnce).to.be.true;
+        expect(sqsSendMessageStub.args[0][0]).to.deep.equal({
+          QueueUrl: 'http://aws.queue.url/',
+          MessageBody: '{\"message\":\"message\"}',
+          MessageGroupId: 'message-group'
+        });
+      });
+  });
+
+  it('Given sending message to SQS, ' +
+    'When the message send fails, ' +
+    'Then it rejects with an AWS error', () => {
+    const sqsMessageService =
+      new SqsMessageService('aws_secret_key', 'aws_access_key_id', 'http://aws.queue.url/');
+    return sqsMessageService.sendMessage({ message: 'message' }, 'message-group')
+      .then(() => {
+        throw new Error('test failed');
+      })
+      .catch((err) => {
+        expect(err).not.to.be.undefined;
+        expect(err.message).to.equal('test failed');
+      });
   });
 });

@@ -1,7 +1,7 @@
 import * as AWS from 'aws-sdk';
 
-import GetMessageOptions from './model/GetMessageOptions';
-import DecompressionService from '../../decompression/service/DecompressionService';
+import GetMessageOptions from '../model/GetMessageOptions';
+import DecompressionService from '../../../decompression/service/DecompressionService';
 
 const MAX_NUMBER_OF_MESSAGES = 10;
 
@@ -66,6 +66,22 @@ export default class SqsMessageService {
           return;
         }
         resolve(`Message "${message.MessageId}" acknowledged.`);
+      });
+    });
+  }
+
+  public sendMessage(message: any, messageGroupId: string): Promise<AWS.SQS.SendMessageResult> {
+    return new Promise<AWS.SQS.SendMessageResult>((resolve, reject) => {
+      const params: AWS.SQS.SendMessageRequest = {
+        MessageGroupId: messageGroupId,
+        QueueUrl: this.sqsQueueUrl,
+        MessageBody: JSON.stringify(message),
+      };
+      this.sqs.sendMessage(params, (err, data) => {
+        if (err) {
+          return reject(`Message not sent. Error: "${err.message}"`);
+        }
+        resolve(data);
       });
     });
   }

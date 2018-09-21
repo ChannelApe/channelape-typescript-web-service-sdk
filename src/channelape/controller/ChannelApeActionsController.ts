@@ -10,7 +10,7 @@ const PARSE_INT_RADIX = 10;
 
 export default abstract class ChannelApeActionsController {
   protected logger: Logger;
-  private updateHealthCheckInterval: NodeJS.Timer | undefined;
+  private updateHealthCheckInterval?: NodeJS.Timer;
 
   constructor(loggerName: string, protected channelApeClient: ChannelApeClient) {
     this.logger = new Logger(loggerName, Secrets.env.LOG_LEVEL);
