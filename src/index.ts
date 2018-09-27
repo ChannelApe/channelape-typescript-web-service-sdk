@@ -9,3 +9,5 @@ export { default as AdditionalFieldService } from './channelape/service/Addition
 export { default as ErrorReportModule } from './report/model/ErrorReportModule';
 export { default as ErrorReport } from './report/model/ErrorReport';
 export { default as ErrorReportingService } from './report/service/ErrorReportingService';
+export { default as SendMailService } from './report/service/SendMailService';
+export { default as SendMailRequest } from './report/model/SendMailRequest';
