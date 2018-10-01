@@ -11,27 +11,9 @@ describe('ErrorReportingService', () => {
   let errorReportingService: ErrorReportingService;
   let sandbox: sinon.SinonSandbox;
   let sendMessageStub: sinon.SinonStub;
-  const errorMessage: ErrorReport = {
-    channelApeOrderId: '12345',
-    channelOrderId: 'channel-order-id',
-    message: 'hey this order is broken',
-    module: ErrorReportModule.ORDER,
-    poNumber: 'po-number'
-  };
-  const expectedProdMessage = {
-    channelApeOrder: 'https://app.channelape.com/orders/12345',
-    channelOrderId: 'channel-order-id',
-    message: 'hey this order is broken',
-    module: 'Order',
-    poNumber: 'po-number'
-  };
-  const expectedDevMessage = {
-    channelApeOrder: 'https://dev.channelape.com/orders/12345',
-    channelOrderId: 'channel-order-id',
-    message: 'hey this order is broken',
-    module: 'Order',
-    poNumber: 'po-number'
-  };
+  let errorMessage: ErrorReport;
+  let expectedDevMessage: any;
+  let expectedProdMessage: any;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -41,13 +23,35 @@ describe('ErrorReportingService', () => {
       'queue-url',
       LogLevel.ERROR
     );
+
+    errorMessage = {
+      channelApeOrderId: '12345',
+      channelOrderId: 'channel-order-id',
+      message: 'hey this order is broken',
+      module: ErrorReportModule.ORDER,
+      poNumber: 'po-number'
+    };
+    expectedProdMessage = {
+      channelApeOrder: 'https://app.channelape.com/orders/12345',
+      channelOrderId: 'channel-order-id',
+      message: 'hey this order is broken',
+      module: 'Order',
+      poNumber: 'po-number'
+    };
+    expectedDevMessage = {
+      channelApeOrder: 'https://dev.channelape.com/orders/12345',
+      channelOrderId: 'channel-order-id',
+      message: 'hey this order is broken',
+      module: 'Order',
+      poNumber: 'po-number'
+    };
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it('Given sending an error report, ' +
+  it('Given queuing an error report, ' +
     'When the error report is received, ' +
     'Then it will add the error to the queue', (done) => {
     errorReportingService.queueError(errorMessage);
@@ -56,7 +60,18 @@ describe('ErrorReportingService', () => {
     done();
   });
 
-  it('Given sending an error report, ' +
+  it('Given queuing an error report, ' +
+    'When the error report is missing an order ID, ' +
+    'Then ChannelApe order URL will not be added to the report', (done) => {
+    errorMessage.channelApeOrderId = undefined;
+    expectedProdMessage.channelApeOrder = undefined;
+    errorReportingService.queueError(errorMessage);
+    expect(sendMessageStub.callCount).to.equal(1);
+    expect(sendMessageStub.args[0][0]).to.deep.equal(expectedProdMessage);
+    done();
+  });
+
+  it('Given queuing an error report, ' +
     'When the error report is initialized with the staging flag set to true, ' +
     'Then it will set the ChannelApe order link to point to dev.channelape.com', (done) => {
     errorReportingService = new ErrorReportingService(

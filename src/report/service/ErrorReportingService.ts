@@ -27,11 +27,12 @@ export default class ErrorReportingService {
   }
 
   public queueError(errorReport: ErrorReport): void {
+    const channelApeOrderUrl = `https://${this.channelApeWebAppDomainName}/orders/${errorReport.channelApeOrderId}`;
     const message = {
       module: errorReport.module,
       channelOrderId: errorReport.channelOrderId,
       poNumber: errorReport.poNumber,
-      channelApeOrder: `https://${this.channelApeWebAppDomainName}/orders/${errorReport.channelApeOrderId}`,
+      channelApeOrder: errorReport.channelApeOrderId ? channelApeOrderUrl : undefined,
       message: errorReport.message
     };
     this.sqsMessageService.sendMessage(message, uuid.v4())
