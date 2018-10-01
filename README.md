@@ -10,4 +10,4 @@ Common Platform & SDK Use Cases:
 * [Shopify Inventory Management](https://www.channelape.com/solutions/shopify-inventory-management/)
 * [Shopify EDI](https://www.channelape.com/solutions/shopify-plus-edi-integration/)
 * [Shopify ERP](https://www.channelape.com/solutions/shopify-plus-erp-integration/)
-* [Shopify Order Management](https://www.channelape.com/solutions/shopify-plus-erp-integration/)
+* [Shopify Order Management](https://www.channelape.com/solutions/shopify-plus-order-management/)
