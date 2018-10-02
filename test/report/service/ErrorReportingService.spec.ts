@@ -1,6 +1,6 @@
 import * as sinon from 'sinon';
 import { expect } from 'chai';
-import { LogLevel } from 'channelape-logger';
+import { ChannelApeClient, Order, OrderStatus } from 'channelape-sdk';
 
 import SqsMessageService from '../../../src/aws/sqs/service/SqsMessageService';
 import ErrorReportingService from '../../../src/report/service/ErrorReportingService';
@@ -11,9 +11,13 @@ describe('ErrorReportingService', () => {
   let errorReportingService: ErrorReportingService;
   let sandbox: sinon.SinonSandbox;
   let sendMessageStub: sinon.SinonStub;
+  let ordersGetStub: sinon.SinonStub;
+  let ordersStub: sinon.SinonStub;
   let errorMessage: ErrorReport;
+  let channelApeClient: ChannelApeClient;
   let expectedDevMessage: any;
   let expectedProdMessage: any;
+  let channelApeOrder: Order;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -21,7 +25,6 @@ describe('ErrorReportingService', () => {
     errorReportingService = new ErrorReportingService(
       { accessKeyId: 'access-key', secretKey: 'secret-key', region: 'region' },
       'queue-url',
-      LogLevel.ERROR
     );
 
     errorMessage = {
@@ -45,6 +48,23 @@ describe('ErrorReportingService', () => {
       module: 'Order',
       poNumber: 'po-number'
     };
+    channelApeOrder = {
+      additionalFields: [{ name: 'name', value: 'po-number' }],
+      id: '12345',
+      channelOrderId: 'channel-order-id',
+      channelId: 'channel-id',
+      alphabeticCurrencyCode: 'USD',
+      businessId: 'business-id',
+      purchasedAt: new Date(),
+      createdAt: new Date(),
+      lineItems: [],
+      status: OrderStatus.OPEN,
+      updatedAt: new Date()
+    };
+
+    ordersGetStub = sandbox.stub().resolves(channelApeOrder);
+    ordersStub = sandbox.stub(ChannelApeClient.prototype, 'orders').returns({ get: ordersGetStub });
+    channelApeClient = new ChannelApeClient({ sessionId: 'session_id' });
   });
 
   afterEach(() => {
@@ -53,36 +73,101 @@ describe('ErrorReportingService', () => {
 
   it('Given queuing an error report, ' +
     'When the error report is received, ' +
-    'Then it will add the error to the queue', (done) => {
-    errorReportingService.queueError(errorMessage);
-    expect(sendMessageStub.callCount).to.equal(1);
-    expect(sendMessageStub.args[0][0]).to.deep.equal(expectedProdMessage);
-    done();
+    'Then it will add the error to the queue', () => {
+    return errorReportingService.queueError(errorMessage)
+      .then(() => {
+        expect(ordersGetStub.callCount).to.equal(0);
+        expect(sendMessageStub.callCount).to.equal(1);
+        expect(sendMessageStub.args[0][0]).to.deep.equal(expectedProdMessage);
+      });
   });
 
   it('Given queuing an error report, ' +
     'When the error report is missing an order ID, ' +
-    'Then ChannelApe order URL will not be added to the report', (done) => {
+    'Then ChannelApe order URL will not be added to the report', () => {
     errorMessage.channelApeOrderId = undefined;
     expectedProdMessage.channelApeOrder = undefined;
-    errorReportingService.queueError(errorMessage);
-    expect(sendMessageStub.callCount).to.equal(1);
-    expect(sendMessageStub.args[0][0]).to.deep.equal(expectedProdMessage);
-    done();
+    return errorReportingService.queueError(errorMessage)
+      .then(() => {
+        expect(ordersGetStub.callCount).to.equal(0);
+        expect(sendMessageStub.callCount).to.equal(1);
+        expect(sendMessageStub.args[0][0]).to.deep.equal(expectedProdMessage);
+      });
   });
 
   it('Given queuing an error report, ' +
     'When the error report is initialized with the staging flag set to true, ' +
-    'Then it will set the ChannelApe order link to point to dev.channelape.com', (done) => {
+    'Then it will set the ChannelApe order link to point to dev.channelape.com', () => {
     errorReportingService = new ErrorReportingService(
       { accessKeyId: 'access-key', secretKey: 'secret-key', region: 'region' },
       'queue-url',
-      LogLevel.ERROR,
       true
     );
-    errorReportingService.queueError(errorMessage);
-    expect(sendMessageStub.callCount).to.equal(1);
-    expect(sendMessageStub.args[0][0]).to.deep.equal(expectedDevMessage);
-    done();
+    return errorReportingService.queueError(errorMessage)
+      .then(() => {
+        expect(ordersGetStub.callCount).to.equal(0);
+        expect(sendMessageStub.callCount).to.equal(1);
+        expect(sendMessageStub.args[0][0]).to.deep.equal(expectedDevMessage);
+      });
+  });
+
+  it('Given queuing an error report, ' +
+    'When it is missing an order ID, ' +
+    'Then it will get the data from channelape', () => {
+    ordersGetStub = sandbox.stub().resolves([channelApeOrder]);
+    ordersStub.restore();
+    ordersStub = sandbox.stub(ChannelApeClient.prototype, 'orders').returns({ get: ordersGetStub });
+    errorReportingService = new ErrorReportingService(
+      { accessKeyId: 'access-key', secretKey: 'secret-key', region: 'region' },
+      'queue-url',
+      false,
+      channelApeClient,
+      'business-id'
+    );
+    errorMessage.channelApeOrderId = undefined;
+    return errorReportingService.queueError(errorMessage)
+      .then(() => {
+        expect(ordersGetStub.callCount).to.equal(1);
+        expect(sendMessageStub.callCount).to.equal(1);
+        expect(sendMessageStub.args[0][0]).to.deep.equal(expectedProdMessage);
+      });
+  });
+
+  it('Given queuing an error report, ' +
+    'When it is missing a channel order ID, ' +
+    'Then it will get the data from channelape', () => {
+    errorReportingService = new ErrorReportingService(
+      { accessKeyId: 'access-key', secretKey: 'secret-key', region: 'region' },
+      'queue-url',
+      false,
+      channelApeClient,
+      'business-id'
+    );
+    errorMessage.channelOrderId = undefined;
+    return errorReportingService.queueError(errorMessage)
+      .then(() => {
+        expect(ordersGetStub.callCount).to.equal(1);
+        expect(sendMessageStub.callCount).to.equal(1);
+        expect(sendMessageStub.args[0][0]).to.deep.equal(expectedProdMessage);
+      });
+  });
+
+  it('Given queuing an error report, ' +
+    'When it is missing a PO number, ' +
+    'Then it will get the data from channelape', () => {
+    errorReportingService = new ErrorReportingService(
+      { accessKeyId: 'access-key', secretKey: 'secret-key', region: 'region' },
+      'queue-url',
+      false,
+      channelApeClient,
+      'business-id'
+    );
+    errorMessage.poNumber = undefined;
+    return errorReportingService.queueError(errorMessage)
+      .then(() => {
+        expect(ordersGetStub.callCount).to.equal(1);
+        expect(sendMessageStub.callCount).to.equal(1);
+        expect(sendMessageStub.args[0][0]).to.deep.equal(expectedProdMessage);
+      });
   });
 });
