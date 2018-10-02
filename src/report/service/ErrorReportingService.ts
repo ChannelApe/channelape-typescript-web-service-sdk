@@ -59,11 +59,11 @@ export default class ErrorReportingService {
 
   private getMissingData(errorReport: ErrorReport): Promise<ErrorReport> {
     return new Promise((resolve, reject) => {
-      if (this.channelApeClient === undefined || errorReport.module === ErrorReportModule.INVENTORY) {
-        return resolve(errorReport);
-      }
-      if (!errorReport.channelApeOrderId || !errorReport.channelOrderId || !errorReport.poNumber) {
+      if (this.canGetMoreData(errorReport)) {
         if (errorReport.channelApeOrderId) {
+          if (this.channelApeClient === undefined) {
+            return resolve(errorReport);
+          }
           this.channelApeClient.orders().get(errorReport.channelApeOrderId)
             .then((order) => {
               errorReport.channelOrderId = order.channelOrderId;
@@ -74,7 +74,7 @@ export default class ErrorReportingService {
               return resolve(errorReport);
             });
         } else if (errorReport.channelOrderId) {
-          if (!this.businessId) {
+          if (!this.businessId || this.channelApeClient === undefined) {
             return resolve(errorReport);
           }
           this.channelApeClient.orders()
@@ -94,5 +94,15 @@ export default class ErrorReportingService {
         return resolve(errorReport);
       }
     });
+  }
+
+  private canGetMoreData(errorReport: ErrorReport): boolean {
+    if (this.channelApeClient === undefined || errorReport.module === ErrorReportModule.INVENTORY) {
+      return false;
+    }
+    if (!errorReport.channelApeOrderId || !errorReport.channelOrderId || !errorReport.poNumber) {
+      return true;
+    }
+    return false;
   }
 }
