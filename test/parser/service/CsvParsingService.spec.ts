@@ -27,7 +27,7 @@ describe('CSV Parsing Service', () => {
   });
 
   it('Given parsing strings into a CSV document, ' +
-    'When the CSV failes to parse, ' +
+    'When the CSV fails to parse, ' +
     'Then it will reject with the error', () => {
     return Parser.Csv.toCsv(['youlikecrabbypattiesdontyousquidward'], inputFields)
       .then(() => {
