@@ -27,7 +27,7 @@ describe('CSV Parsing Service', () => {
   });
 
   it('Given parsing strings into a CSV document, ' +
-    'When the CSV failes to parse, ' +
+    'When the CSV fails to parse, ' +
     'Then it will reject with the error', () => {
     return Parser.Csv.toCsv(['youlikecrabbypattiesdontyousquidward'], inputFields)
       .then(() => {
@@ -35,6 +35,63 @@ describe('CSV Parsing Service', () => {
       })
       .catch((err) => {
         expect(err.message).to.equal('Invalid JSON (Unexpected "y" at position 1 in state STOP)');
+      });
+  });
+
+  it('Given parsing a CSV document, ' +
+    'Then it will return an object of type T', () => {
+    const csv =
+`orderId,customerId,sku,price
+o1,c1,s1,11.11
+o2,c2,s2,22.22
+o3,c3,s3,33.33`;
+
+    interface objectType {
+      orderId: string;
+      customerId: string;
+      sku: string;
+      price: string;
+    }
+
+    return Parser.Csv.fromCsv<objectType>(csv)
+      .then((objects) => {
+        expect(objects.length).to.equal(3, 'There should be three objects in the array parsed from the CSV string');
+
+        expect(objects[0].orderId).to.equal('o1');
+        expect(objects[0].customerId).to.equal('c1');
+        expect(objects[0].sku).to.equal('s1');
+        expect(objects[0].price).to.equal('11.11');
+
+        expect(objects[1].orderId).to.equal('o2');
+        expect(objects[1].customerId).to.equal('c2');
+        expect(objects[1].sku).to.equal('s2');
+        expect(objects[1].price).to.equal('22.22');
+
+        expect(objects[2].orderId).to.equal('o3');
+        expect(objects[2].customerId).to.equal('c3');
+        expect(objects[2].sku).to.equal('s3');
+        expect(objects[2].price).to.equal('33.33');
+      });
+  });
+
+  it('Given parsing a CSV document, ' +
+    'When the CSV fails to parse, ' +
+    'Then it will return a rejected promise', () => {
+    const csv = 1701;
+
+    interface objectType {
+      orderId: string;
+      customerId: string;
+      sku: string;
+      price: string;
+    }
+
+    return Parser.Csv.fromCsv<objectType>(csv as any)
+      .then((objects) => {
+        throw new Error('Should not have parsed!');
+      })
+      .catch((e) => {
+        expect(e.message).to.equal('Invalid data argument: 1701');
       });
   });
 });
