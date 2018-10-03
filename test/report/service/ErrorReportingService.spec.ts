@@ -32,7 +32,8 @@ describe('ErrorReportingService', () => {
       channelOrderId: 'channel-order-id',
       message: 'hey this order is broken',
       module: ErrorReportModule.ORDER,
-      poNumber: 'po-number'
+      poNumber: 'po-number',
+      businessId: 'business-id'
     };
     expectedProdMessage = {
       channelApeOrder: 'https://app.channelape.com/orders/12345',
@@ -121,8 +122,7 @@ describe('ErrorReportingService', () => {
       { accessKeyId: 'access-key', secretKey: 'secret-key', region: 'region' },
       'queue-url',
       false,
-      channelApeClient,
-      'business-id'
+      channelApeClient
     );
     errorMessage.channelApeOrderId = undefined;
     return errorReportingService.queueError(errorMessage)
@@ -140,8 +140,7 @@ describe('ErrorReportingService', () => {
       { accessKeyId: 'access-key', secretKey: 'secret-key', region: 'region' },
       'queue-url',
       false,
-      channelApeClient,
-      'business-id'
+      channelApeClient
     );
     errorMessage.channelOrderId = undefined;
     return errorReportingService.queueError(errorMessage)
@@ -159,8 +158,7 @@ describe('ErrorReportingService', () => {
       { accessKeyId: 'access-key', secretKey: 'secret-key', region: 'region' },
       'queue-url',
       false,
-      channelApeClient,
-      'business-id'
+      channelApeClient
     );
     errorMessage.poNumber = undefined;
     return errorReportingService.queueError(errorMessage)
