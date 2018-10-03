@@ -1,5 +1,5 @@
 import * as uuid from 'uuid';
-import { ChannelApeClient } from 'channelape-sdk';
+import { ChannelApeClient, Order } from 'channelape-sdk';
 
 import SqsMessageService from '../../aws/sqs/service/SqsMessageService';
 import ErrorReport from '../model/ErrorReport';
@@ -33,17 +33,66 @@ export default class ErrorReportingService {
 
   public queueError(errorReport: ErrorReport): Promise<{ }> {
     return new Promise((resolve, reject) => {
-      this.getMissingData(errorReport)
-        .then(errorReport => this.sendMessageToSqs(errorReport))
-        .then(() => resolve())
-        .catch(() => reject());
+      if (this.isErrorReportMissingData(errorReport)) {
+        this.getMissingData(errorReport)
+          .then(errorReport => this.sendMessageToSqs(errorReport))
+          .then(reportSent => resolve(reportSent))
+          .catch(err => reject(err));
+      } else {
+        this.sendMessageToSqs(errorReport)
+          .then(reportSent => resolve(reportSent))
+          .catch(err => reject(err));
+      }
+    });
+  }
+
+  private isErrorReportMissingData(errorReport: ErrorReport): boolean {
+    if (this.channelApeClient === undefined || errorReport.module === ErrorReportModule.INVENTORY) {
+      return false;
+    }
+    if (!errorReport.channelApeOrderId || !errorReport.channelOrderId || !errorReport.poNumber) {
+      return true;
+    }
+    return false;
+  }
+
+  private getMissingData(errorReport: ErrorReport): Promise<ErrorReport> {
+    return new Promise((resolve) => {
+      this.getOrderFromErrorReport(errorReport)
+        .then((order) => {
+          errorReport.channelApeOrderId = order.id;
+          errorReport.channelOrderId = order.channelOrderId;
+          errorReport.poNumber = AdditionalFieldService.getValue(order.additionalFields, 'name');
+          resolve(errorReport);
+        })
+        .catch(() => resolve(errorReport));
+    });
+  }
+
+  private getOrderFromErrorReport(errorReport: ErrorReport): Promise<Order> {
+    return new Promise((resolve, reject) => {
+      if (this.channelApeClient === undefined) {
+        return reject();
+      }
+      if (errorReport.channelApeOrderId) {
+        this.channelApeClient.orders()
+          .get(errorReport.channelApeOrderId)
+          .then(order => resolve(order))
+          .catch(err => reject(err));
+      } else if (errorReport.channelOrderId && this.businessId) {
+        this.channelApeClient.orders()
+          .get({ channelOrderId: errorReport.channelOrderId, businessId: this.businessId })
+          .then(orders => resolve(orders[0]))
+          .catch();
+      } else {
+        reject();
+      }
     });
   }
 
   private sendMessageToSqs(errorReport: ErrorReport): Promise<{ }> {
     return new Promise((resolve, reject) => {
-      const channelApeOrderUrl =
-      `https://${this.channelApeWebAppDomainName}/orders/${errorReport.channelApeOrderId}`;
+      const channelApeOrderUrl = `https://${this.channelApeWebAppDomainName}/orders/${errorReport.channelApeOrderId}`;
       const message = {
         module: errorReport.module,
         channelOrderId: errorReport.channelOrderId,
@@ -52,57 +101,8 @@ export default class ErrorReportingService {
         message: errorReport.message
       };
       this.sqsMessageService.sendMessage(message, uuid.v4())
-        .then(() => resolve())
+        .then(() => resolve(errorReport))
         .catch(err => reject(`Failed to queue the following error: ${JSON.stringify(message)} because: ${err}`));
     });
-  }
-
-  private getMissingData(errorReport: ErrorReport): Promise<ErrorReport> {
-    return new Promise((resolve, reject) => {
-      if (this.canGetMoreData(errorReport)) {
-        if (errorReport.channelApeOrderId) {
-          if (this.channelApeClient === undefined) {
-            return resolve(errorReport);
-          }
-          this.channelApeClient.orders().get(errorReport.channelApeOrderId)
-            .then((order) => {
-              errorReport.channelOrderId = order.channelOrderId;
-              errorReport.poNumber = AdditionalFieldService.getValue(order.additionalFields, 'name');
-              return resolve(errorReport);
-            })
-            .catch(() => {
-              return resolve(errorReport);
-            });
-        } else if (errorReport.channelOrderId) {
-          if (!this.businessId || this.channelApeClient === undefined) {
-            return resolve(errorReport);
-          }
-          this.channelApeClient.orders()
-            .get({ channelOrderId: errorReport.channelOrderId, businessId: this.businessId })
-            .then((orders) => {
-              errorReport.channelApeOrderId = orders[0].id;
-              errorReport.poNumber = AdditionalFieldService.getValue(orders[0].additionalFields, 'name');
-              return resolve(errorReport);
-            })
-            .catch(() => {
-              return resolve(errorReport);
-            });
-        } else {
-          return resolve(errorReport);
-        }
-      } else {
-        return resolve(errorReport);
-      }
-    });
-  }
-
-  private canGetMoreData(errorReport: ErrorReport): boolean {
-    if (this.channelApeClient === undefined || errorReport.module === ErrorReportModule.INVENTORY) {
-      return false;
-    }
-    if (!errorReport.channelApeOrderId || !errorReport.channelOrderId || !errorReport.poNumber) {
-      return true;
-    }
-    return false;
   }
 }
