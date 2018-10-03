@@ -1,5 +1,6 @@
 import { Readable, Writable } from 'stream';
 import { Transform } from 'json2csv';
+import * as csvParser from 'csv-parse';
 
 export default class CsvParsingService {
   public static toCsv(csvStrings: string[], fields: string[]): Promise<string> {
@@ -21,6 +22,21 @@ export default class CsvParsingService {
       json2csv
         .on('end', () => resolve(csvString))
         .on('error', err => reject(err));
+    });
+  }
+
+  public static fromCsv<T>(csv: string): Promise<T[]> {
+    return new Promise<T[]>((resolve, reject) => {
+      csvParser(csv, {
+        columns: true
+      },
+        (err, records) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(records);
+        });
     });
   }
 }
