@@ -10,7 +10,7 @@ const PARSE_INT_RADIX = 10;
 
 export default abstract class ChannelApeActionsController {
   protected logger: Logger;
-  private updateHealthCheckInterval?: NodeJS.Timer;
+  private updateHealthCheckIntervals: {[key: string]: NodeJS.Timer} = {};
 
   constructor(loggerName: string, protected channelApeClient: ChannelApeClient) {
     this.logger = new Logger(loggerName, Secrets.env.LOG_LEVEL);
@@ -24,7 +24,7 @@ export default abstract class ChannelApeActionsController {
     return this.channelApeClient.actions().updateHealthCheck(actionId)
       .then((updatedAction) => {
         res.sendStatus(200);
-        this.updateHealthCheckInterval = this.startHealthCheckInterval(
+        this.updateHealthCheckIntervals[actionId] = this.startHealthCheckInterval(
           actionId,
           updatedAction.healthCheckIntervalInSeconds
         );
@@ -35,14 +35,13 @@ export default abstract class ChannelApeActionsController {
           this.handleError(err, actionId);
           return;
         }
-        if (this.updateHealthCheckInterval !== undefined) {
-          timers.clearInterval(this.updateHealthCheckInterval);
-        }
+        this.clearHealthCheckInterval(actionId);
         res.status(400).send(err);
       });
   }
 
   private startHealthCheckInterval(actionId: string, intervalInSeconds: number): NodeJS.Timer {
+    this.clearHealthCheckInterval(actionId);
     return timers.setInterval(() => this.updateHealthCheck(actionId), intervalInSeconds * 1000);
   }
 
@@ -55,19 +54,14 @@ export default abstract class ChannelApeActionsController {
   }
 
   protected complete(actionId: string): void {
-    if (this.updateHealthCheckInterval !== undefined) {
-      timers.clearInterval(this.updateHealthCheckInterval);
-    }
+    this.clearHealthCheckInterval(actionId);
     this.channelApeClient.actions().complete(actionId)
       .then(() => this.logger.info(`Action ${actionId} has been completed`))
       .catch(err => this.logger.error(`Error completing action ${actionId} ${JSON.stringify(err)}`));
   }
 
   protected handleError(err: any, actionId: string): void {
-    if (this.updateHealthCheckInterval !== undefined) {
-      timers.clearInterval(this.updateHealthCheckInterval);
-    }
-
+    this.clearHealthCheckInterval(actionId);
     let error: any;
     if (err.message === undefined) {
       error = JSON.stringify(err);
@@ -96,5 +90,11 @@ export default abstract class ChannelApeActionsController {
     return now
       .subtract({ minutes: parseInt(openOrdersRetrievalDelayMinutes, PARSE_INT_RADIX) })
       .toDate();
+  }
+
+  private clearHealthCheckInterval(actionId: string): void {
+    if (this.updateHealthCheckIntervals[actionId] !== undefined) {
+      timers.clearInterval(this.updateHealthCheckIntervals[actionId]);
+    }
   }
 }
