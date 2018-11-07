@@ -1,3 +1,8 @@
+import * as moment from 'moment';
+
+const absoluteStartDate =  moment().subtract(10, 'days').toISOString();
+process.env.CHANNEL_APE_OPEN_ORDERS_DATE = absoluteStartDate;
+
 import * as sinon from 'sinon';
 import { ChannelApeClient, Environment, Action, ActionProcessingStatus } from 'channelape-sdk';
 import { expect } from 'chai';
@@ -43,6 +48,10 @@ class GenericControllerThatResolves extends ChannelApeActionsController {
     }, 200);
     return deferred.promise;
   }
+
+  public getStartDate(now: moment.Moment, channelApeOpenOrdersStartDateInveralDays: string): Date {
+    return this.getOrderRetrievalStartDate(now, channelApeOpenOrdersStartDateInveralDays);
+  }
 }
 
 describe('ChannelApeActionsController', () => {
@@ -53,6 +62,7 @@ describe('ChannelApeActionsController', () => {
   let completeActionStub: sinon.SinonStub;
   let errorActionStub: sinon.SinonStub;
   let clearIntervalSpy: sinon.SinonSpy;
+  let setIntervalSpy: sinon.SinonSpy;
   const action: Action = {
     action: 'Test Action',
     businessId: 'businessId',
@@ -71,6 +81,7 @@ describe('ChannelApeActionsController', () => {
     action.processingStatus = ActionProcessingStatus.IN_PROGRESS;
     sandbox = sinon.createSandbox();
     clearIntervalSpy = sandbox.spy(timers, 'clearInterval');
+    setIntervalSpy = sandbox.spy(timers, 'setInterval');
     updateActionStub = sandbox.stub().callsFake((actionId) => {
       if (clearIntervalSpy.callCount >= 3) {
         throw new Error('Update action was called AFTER each update action interval was supposedly cleared');
@@ -137,6 +148,8 @@ describe('ChannelApeActionsController', () => {
         expect(errorActionStub.called).to.be.true;
         expect(updateActionStub.called).to.be.true;
         expect(errorActionStub.args[0][0]).to.equal(expectedActionId);
+        expect(infoLoggerStub.args.find(a => a[0] === `Action ${expectedActionId} has been set as errored`))
+          .not.to.equal(undefined, 'INFO level log should have been made indicating action was set as errored');
       });
   }).timeout(4000);
 
@@ -155,6 +168,12 @@ describe('ChannelApeActionsController', () => {
         expect(infoLoggerStub.args[0][0]).to.equal(`Updating healthcheck for action ${expectedActionId}`);
         expect(errorLoggerStub.args.length).to.equal(0);
         expect(errorActionStub.called).to.be.false;
+        expect(setIntervalSpy.calledOnce).to.equal(true, 'setInterval should have been called once');
+        expect(typeof setIntervalSpy.args[0][0]).to.equal('function', 'setInterval cb');
+        expect(setIntervalSpy.args[0][1])
+          .to.equal(10, 'setInterval interval should equal 1000 * action intervalInSeconds');
+        expect(infoLoggerStub.args.find(a => a[0] === `Action ${expectedActionId} has been completed`))
+          .not.to.equal(undefined, 'INFO level log should have been made indicating action was completed');
         expect(updateActionStub.called).to.be.true;
         expect(completeActionStub.calledOnce).to.be.true;
         expect(completeActionStub.args[0][0]).to.equal(expectedActionId);
@@ -188,5 +207,19 @@ describe('ChannelApeActionsController', () => {
         expect(clearIntervalSpy.callCount).to.be
           .greaterThan(1, 'Clear Interval on Action Complete Interval should be called');
       });
+  });
+
+  it('Given absolute start Date is after the look back interval days' +
+    'Expect get start date to equal absoluteStartDate', () => {
+    const successController = new GenericControllerThatResolves();
+    const now = moment();
+    expect(successController.getStartDate(now, '20').toISOString()).to.equal(absoluteStartDate);
+  });
+
+  it('Given absolute start Date is before the look back interval days' +
+    'Expect get start date to equal look back interval days date', () => {
+    const successController = new GenericControllerThatResolves();
+    const now = moment();
+    expect(successController.getStartDate(now, '1').toISOString()).to.equal(now.toISOString());
   });
 });
