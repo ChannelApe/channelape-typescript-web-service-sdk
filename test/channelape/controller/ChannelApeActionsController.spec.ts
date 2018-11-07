@@ -204,8 +204,10 @@ describe('ChannelApeActionsController', () => {
     return Q.all([p1, p2, p3])
       .then(async (results) => {
         await timeout(1000);
-        expect(clearIntervalSpy.callCount).to.be
-          .greaterThan(1, 'Clear Interval on Action Complete Interval should be called');
+        expect(clearIntervalSpy.callCount).to.equal(5,
+          'Clear Interval on Action Complete Interval should not be called once all Actions have resolved');
+        expect(completeActionStub.callCount)
+          .to.equal(3, 'Complete action should be called 3 times, one for each POST sent to the endpoint');
       });
   });
 
