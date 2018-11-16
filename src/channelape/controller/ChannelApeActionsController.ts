@@ -46,7 +46,7 @@ export default abstract class ChannelApeActionsController {
     return timers.setInterval(() => this.updateHealthCheck(actionId), intervalInSeconds * 1000);
   }
 
-  protected updateHealthCheck(actionId: string): void {
+  private updateHealthCheck(actionId: string): void {
     this.logger.info(`Updating healthcheck for action ${actionId}`);
     this.channelApeClient.actions().updateHealthCheck(actionId)
       .catch((err) => {
@@ -54,13 +54,13 @@ export default abstract class ChannelApeActionsController {
       });
   }
 
-  protected complete(actionId: string): void {
+  private complete(actionId: string): void {
     this.channelApeClient.actions().complete(actionId)
       .then(() => this.logger.info(`Action ${actionId} has been completed`))
       .catch(err => this.logger.error(`Error completing action ${actionId} ${JSON.stringify(err)}`));
   }
 
-  protected handleError(err: any, actionId: string): void {
+  private handleError(err: any, actionId: string): void {
     let error: any;
     if (err.message === undefined) {
       error = JSON.stringify(err);
