@@ -26,12 +26,12 @@ class GenericControllerThatErrs extends ChannelApeActionsController {
     super('LoggerName', channelApeClient);
   }
 
-  protected processAction(businessId: string, actionId: string): Q.Promise<boolean> {
+  protected processAction(businessId: string, actionId: string): Promise<boolean> {
     const deferred = Q.defer<boolean>();
     setTimeout(() => {
       deferred.reject(new Error('BOOM!'));
     }, 150);
-    return deferred.promise;
+    return deferred.promise as any;
   }
 }
 
@@ -40,13 +40,13 @@ class GenericControllerThatResolves extends ChannelApeActionsController {
     super('LoggerName', channelApeClient);
   }
 
-  protected processAction(businessId: string, actionId: string): Q.Promise<boolean> {
+  protected processAction(businessId: string, actionId: string): Promise<boolean> {
     const deferred = Q.defer<boolean>();
     setTimeout(() => {
       this.complete(actionId);
       deferred.resolve(true);
     }, 200);
-    return deferred.promise;
+    return deferred.promise as any;
   }
 
   public getStartDate(now: moment.Moment, channelApeOpenOrdersStartDateInveralDays: string): Date {
@@ -142,11 +142,11 @@ describe('ChannelApeActionsController', () => {
     const errorController = new GenericControllerThatErrs();
     return errorController.handle(req, res)
       .then(() => {
-        expect(clearIntervalSpy.calledOnce).to.be.true;
+        expect(clearIntervalSpy.calledOnce).to.equal(true, 'Healthcheck update should have been cleared');
         expect(infoLoggerStub.args[0][0]).to.equal(`Updating healthcheck for action ${expectedActionId}`);
         expect(errorLoggerStub.args[0][0]).to.equal('Action action_id has failed with error "BOOM!"');
-        expect(errorActionStub.called).to.be.true;
-        expect(updateActionStub.called).to.be.true;
+        expect(errorActionStub.called).to.equal(true, 'Error action should have been called');
+        expect(updateActionStub.called).to.equal(true, 'Update action should have been called');
         expect(errorActionStub.args[0][0]).to.equal(expectedActionId);
         expect(infoLoggerStub.args.find(a => a[0] === `Action ${expectedActionId} has been set as errored`))
           .not.to.equal(undefined, 'INFO level log should have been made indicating action was set as errored');
@@ -204,8 +204,8 @@ describe('ChannelApeActionsController', () => {
     return Q.all([p1, p2, p3])
       .then(async (results) => {
         await timeout(1000);
-        expect(clearIntervalSpy.callCount).to.equal(5,
-          'Clear Interval on Action Complete Interval should not be called once all Actions have resolved');
+        expect(clearIntervalSpy.callCount).to.equal(3,
+          'Clear Interval should not be called once all Actions have resolved');
         expect(completeActionStub.callCount)
           .to.equal(3, 'Complete action should be called 3 times, one for each POST sent to the endpoint');
       });

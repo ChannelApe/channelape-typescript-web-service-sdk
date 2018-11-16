@@ -10,38 +10,39 @@ const PARSE_INT_RADIX = 10;
 
 export default abstract class ChannelApeActionsController {
   protected logger: Logger;
-  private updateHealthCheckIntervals: {[key: string]: NodeJS.Timer} = {};
 
   constructor(loggerName: string, protected channelApeClient: ChannelApeClient) {
     this.logger = new Logger(loggerName, Secrets.env.LOG_LEVEL);
   }
 
-  protected abstract processAction(businessId: string, actionId: string): void;
+  protected abstract processAction(businessId: string, actionId: string): Promise<any>;
 
-  public handle(req: Request, res: Response): Promise<void | Response> {
+  public async handle(req: Request, res: Response): Promise<void | Response> {
     const actionId = req.body.actionId;
+    let updateHealthCheckInterval: NodeJS.Timer | undefined = undefined;
     this.logger.info(`Updating healthcheck for action ${actionId}`);
-    return this.channelApeClient.actions().updateHealthCheck(actionId)
-      .then((updatedAction) => {
-        res.sendStatus(200);
-        this.updateHealthCheckIntervals[actionId] = this.startHealthCheckInterval(
-          actionId,
-          updatedAction.healthCheckIntervalInSeconds
-        );
-        return this.processAction(updatedAction.businessId, actionId);
-      })
-      .catch((err) => {
-        if (res.headersSent) {
-          this.handleError(err, actionId);
-          return;
-        }
-        this.clearHealthCheckInterval(actionId);
-        res.status(400).send(err);
-      });
+    try {
+      const updatedAction = await this.channelApeClient.actions().updateHealthCheck(actionId);
+      res.sendStatus(200);
+      updateHealthCheckInterval = this.startHealthCheckInterval(
+        actionId,
+        updatedAction.healthCheckIntervalInSeconds
+      );
+      const result = await this.processAction(updatedAction.businessId, actionId);
+      this.clearHealthCheckInterval(updateHealthCheckInterval);
+      return result;
+    } catch (e) {
+      this.clearHealthCheckInterval(updateHealthCheckInterval);
+      if (res.headersSent) {
+        this.handleError(e, actionId);
+        return;
+      }
+      res.status(400).send(e);
+      return Promise.reject(e);
+    }
   }
 
   private startHealthCheckInterval(actionId: string, intervalInSeconds: number): NodeJS.Timer {
-    this.clearHealthCheckInterval(actionId);
     return timers.setInterval(() => this.updateHealthCheck(actionId), intervalInSeconds * 1000);
   }
 
@@ -54,14 +55,12 @@ export default abstract class ChannelApeActionsController {
   }
 
   protected complete(actionId: string): void {
-    this.clearHealthCheckInterval(actionId);
     this.channelApeClient.actions().complete(actionId)
       .then(() => this.logger.info(`Action ${actionId} has been completed`))
       .catch(err => this.logger.error(`Error completing action ${actionId} ${JSON.stringify(err)}`));
   }
 
   protected handleError(err: any, actionId: string): void {
-    this.clearHealthCheckInterval(actionId);
     let error: any;
     if (err.message === undefined) {
       error = JSON.stringify(err);
@@ -92,9 +91,9 @@ export default abstract class ChannelApeActionsController {
       .toDate();
   }
 
-  private clearHealthCheckInterval(actionId: string): void {
-    if (this.updateHealthCheckIntervals[actionId] !== undefined) {
-      timers.clearInterval(this.updateHealthCheckIntervals[actionId]);
+  private clearHealthCheckInterval(timer: NodeJS.Timer | undefined): void {
+    if (timer !== undefined) {
+      timers.clearInterval(timer);
     }
   }
 }
