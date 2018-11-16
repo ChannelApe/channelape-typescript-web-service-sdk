@@ -30,6 +30,7 @@ export default abstract class ChannelApeActionsController {
       );
       const result = await this.processAction(updatedAction.businessId, actionId);
       this.clearHealthCheckInterval(updateHealthCheckInterval);
+      this.complete(actionId);
       return result;
     } catch (e) {
       this.clearHealthCheckInterval(updateHealthCheckInterval);
