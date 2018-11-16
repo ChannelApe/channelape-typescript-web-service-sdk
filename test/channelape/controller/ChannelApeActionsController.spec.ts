@@ -26,8 +26,8 @@ class GenericControllerThatErrs extends ChannelApeActionsController {
     super('LoggerName', channelApeClient);
   }
 
-  protected processAction(businessId: string, actionId: string): Promise<boolean> {
-    const deferred = Q.defer<boolean>();
+  protected processAction(businessId: string, actionId: string): Promise<void> {
+    const deferred = Q.defer<void>();
     setTimeout(() => {
       deferred.reject(new Error('BOOM!'));
     }, 150);
@@ -40,11 +40,10 @@ class GenericControllerThatResolves extends ChannelApeActionsController {
     super('LoggerName', channelApeClient);
   }
 
-  protected processAction(businessId: string, actionId: string): Promise<boolean> {
-    const deferred = Q.defer<boolean>();
+  protected processAction(businessId: string, actionId: string): Promise<void> {
+    const deferred = Q.defer<void>();
     setTimeout(() => {
-      this.complete(actionId);
-      deferred.resolve(true);
+      deferred.resolve();
     }, 200);
     return deferred.promise as any;
   }

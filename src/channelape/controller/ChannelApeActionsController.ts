@@ -15,9 +15,9 @@ export default abstract class ChannelApeActionsController {
     this.logger = new Logger(loggerName, Secrets.env.LOG_LEVEL);
   }
 
-  protected abstract processAction(businessId: string, actionId: string): Promise<any>;
+  protected abstract processAction(businessId: string, actionId: string): Promise<void>;
 
-  public async handle(req: Request, res: Response): Promise<void | Response> {
+  public async handle(req: Request, res: Response): Promise<void> {
     const actionId = req.body.actionId;
     let updateHealthCheckInterval: NodeJS.Timer | undefined = undefined;
     this.logger.info(`Updating healthcheck for action ${actionId}`);
