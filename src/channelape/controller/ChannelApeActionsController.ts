@@ -10,43 +10,44 @@ const PARSE_INT_RADIX = 10;
 
 export default abstract class ChannelApeActionsController {
   protected logger: Logger;
-  private updateHealthCheckInterval?: NodeJS.Timer;
 
   constructor(loggerName: string, protected channelApeClient: ChannelApeClient) {
     this.logger = new Logger(loggerName, Secrets.env.LOG_LEVEL);
   }
 
-  protected abstract processAction(businessId: string, actionId: string): void;
+  protected abstract processAction(businessId: string, actionId: string): Promise<void>;
 
-  public handle(req: Request, res: Response): Promise<void | Response> {
+  public async handle(req: Request, res: Response): Promise<void> {
     const actionId = req.body.actionId;
+    let updateHealthCheckInterval: NodeJS.Timer | undefined = undefined;
     this.logger.info(`Updating healthcheck for action ${actionId}`);
-    return this.channelApeClient.actions().updateHealthCheck(actionId)
-      .then((updatedAction) => {
-        res.sendStatus(200);
-        this.updateHealthCheckInterval = this.startHealthCheckInterval(
-          actionId,
-          updatedAction.healthCheckIntervalInSeconds
-        );
-        return this.processAction(updatedAction.businessId, actionId);
-      })
-      .catch((err) => {
-        if (res.headersSent) {
-          this.handleError(err, actionId);
-          return;
-        }
-        if (this.updateHealthCheckInterval !== undefined) {
-          timers.clearInterval(this.updateHealthCheckInterval);
-        }
-        res.status(400).send(err);
-      });
+    try {
+      const updatedAction = await this.channelApeClient.actions().updateHealthCheck(actionId);
+      res.sendStatus(200);
+      updateHealthCheckInterval = this.startHealthCheckInterval(
+        actionId,
+        updatedAction.healthCheckIntervalInSeconds
+      );
+      const result = await this.processAction(updatedAction.businessId, actionId);
+      this.clearHealthCheckInterval(updateHealthCheckInterval);
+      this.complete(actionId);
+      return result;
+    } catch (e) {
+      this.clearHealthCheckInterval(updateHealthCheckInterval);
+      if (res.headersSent) {
+        this.handleError(e, actionId);
+        return;
+      }
+      res.status(400).send(e);
+      return Promise.reject(e);
+    }
   }
 
   private startHealthCheckInterval(actionId: string, intervalInSeconds: number): NodeJS.Timer {
     return timers.setInterval(() => this.updateHealthCheck(actionId), intervalInSeconds * 1000);
   }
 
-  protected updateHealthCheck(actionId: string): void {
+  private updateHealthCheck(actionId: string): void {
     this.logger.info(`Updating healthcheck for action ${actionId}`);
     this.channelApeClient.actions().updateHealthCheck(actionId)
       .catch((err) => {
@@ -54,20 +55,13 @@ export default abstract class ChannelApeActionsController {
       });
   }
 
-  protected complete(actionId: string): void {
-    if (this.updateHealthCheckInterval !== undefined) {
-      timers.clearInterval(this.updateHealthCheckInterval);
-    }
+  private complete(actionId: string): void {
     this.channelApeClient.actions().complete(actionId)
       .then(() => this.logger.info(`Action ${actionId} has been completed`))
       .catch(err => this.logger.error(`Error completing action ${actionId} ${JSON.stringify(err)}`));
   }
 
-  protected handleError(err: any, actionId: string): void {
-    if (this.updateHealthCheckInterval !== undefined) {
-      timers.clearInterval(this.updateHealthCheckInterval);
-    }
-
+  private handleError(err: any, actionId: string): void {
     let error: any;
     if (err.message === undefined) {
       error = JSON.stringify(err);
@@ -96,5 +90,11 @@ export default abstract class ChannelApeActionsController {
     return now
       .subtract({ minutes: parseInt(openOrdersRetrievalDelayMinutes, PARSE_INT_RADIX) })
       .toDate();
+  }
+
+  private clearHealthCheckInterval(timer: NodeJS.Timer | undefined): void {
+    if (timer !== undefined) {
+      timers.clearInterval(timer);
+    }
   }
 }
