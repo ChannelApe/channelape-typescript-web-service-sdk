@@ -19,4 +19,4 @@ Common Platform & SDK Use Cases:
 * [Shopify ERP](https://www.channelape.com/solutions/shopify-plus-erp-integration/)
 * [Shopify Order Management](https://www.channelape.com/solutions/shopify-plus-order-management/)
 * [Shopify Netsuite Integration](https://www.channelape.com/solutions/shopify-netsuite-integration-sync/)
-* [Shopify 3pl](https://www.channelape.com/list/top-100-us-and-global-third-party-logistics-providers-3pl-2019/)
+* [Shopify 3pl](https://www.channelape.com/solutions/shopify-3pl/)
